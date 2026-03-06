@@ -10,27 +10,31 @@ function App() {
   const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
 
   const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
 
-  // Fetch live exchange rate
+  // Fetch live exchange rate whenever currencies change
   useEffect(() => {
     const fetchRate = async () => {
       try {
         const res = await fetch(
           `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}`
         );
-
         const data = await res.json();
-
         setExchangeRate(data.conversion_rate);
+
+        // Auto convert if amount is present
+        if (amount && amount > 0) {
+          setResult((amount * data.conversion_rate).toFixed(2));
+        }
       } catch {
         console.log("Rate fetch failed");
       }
     };
 
     fetchRate();
-  }, [fromCurrency, toCurrency]);
+  }, [fromCurrency, toCurrency, amount]);
 
   const swapCurrencies = () => {
     const temp = fromCurrency;
@@ -43,7 +47,6 @@ function App() {
       setError("Enter a valid amount");
       return;
     }
-
     if (fromCurrency.value === toCurrency.value) {
       setError("Choose two different currencies");
       return;
@@ -56,14 +59,29 @@ function App() {
       const res = await fetch(
         `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}/${amount}`
       );
-
       const data = await res.json();
-
       setResult(data.conversion_result);
+
+      // Add to history
+      setHistory((prev) => [
+        { from: fromCurrency.value, to: toCurrency.value, amount, result: data.conversion_result },
+        ...prev,
+      ]);
     } catch {
       setError("Conversion failed. Try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle input change (auto convert)
+  const handleAmountChange = (e) => {
+    const val = e.target.value;
+    setAmount(val);
+    if (val && val > 0 && exchangeRate) {
+      setResult((val * exchangeRate).toFixed(2));
+    } else {
+      setResult(null);
     }
   };
 
@@ -80,25 +98,22 @@ function App() {
           type="number"
           placeholder="Enter amount"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={handleAmountChange}
           className="w-full border p-2 rounded mb-4"
         />
 
         {/* Currency Selectors */}
         <div className="space-y-3">
-
           <Select
             options={currencies}
             value={fromCurrency}
             onChange={setFromCurrency}
           />
-
           <Select
             options={currencies}
             value={toCurrency}
             onChange={setToCurrency}
           />
-
         </div>
 
         {/* Swap Button */}
@@ -142,6 +157,21 @@ function App() {
         {result && !loading && (
           <div className="text-center mt-6 text-lg font-semibold">
             {amount} {fromCurrency.value} = {result} {toCurrency.value}
+          </div>
+        )}
+
+        {/* Conversion History */}
+        {history.length > 0 && (
+          <div className="mt-6">
+            <h2 className="font-semibold mb-2">History</h2>
+            <ul className="space-y-1 text-sm text-gray-700">
+              {history.map((item, index) => (
+                <li key={index} className="flex justify-between border-b pb-1">
+                  <span>{item.amount} {item.from}</span>
+                  <span>= {item.result} {item.to}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
