@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Select from "react-select";
 import { currencies } from "./data/currencies";
 
@@ -7,10 +7,30 @@ function App() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0]);
   const [toCurrency, setToCurrency] = useState(currencies[1]);
   const [result, setResult] = useState(null);
+  const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const API_KEY = "YOUR_API_KEY";
+
+  // Fetch live exchange rate
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const res = await fetch(
+          `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}`
+        );
+
+        const data = await res.json();
+
+        setExchangeRate(data.conversion_rate);
+      } catch {
+        console.log("Rate fetch failed");
+      }
+    };
+
+    fetchRate();
+  }, [fromCurrency, toCurrency]);
 
   const swapCurrencies = () => {
     const temp = fromCurrency;
@@ -55,7 +75,7 @@ function App() {
           Currency Converter
         </h1>
 
-        {/* Amount */}
+        {/* Amount Input */}
         <input
           type="number"
           placeholder="Enter amount"
@@ -71,19 +91,17 @@ function App() {
             options={currencies}
             value={fromCurrency}
             onChange={setFromCurrency}
-            placeholder="From currency"
           />
 
           <Select
             options={currencies}
             value={toCurrency}
             onChange={setToCurrency}
-            placeholder="To currency"
           />
 
         </div>
 
-        {/* Swap */}
+        {/* Swap Button */}
         <button
           onClick={swapCurrencies}
           className="w-full mt-4 mb-3 bg-gray-200 hover:bg-gray-300 p-2 rounded"
@@ -91,13 +109,20 @@ function App() {
           Swap Currencies
         </button>
 
-        {/* Convert */}
+        {/* Convert Button */}
         <button
           onClick={convertCurrency}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Convert
         </button>
+
+        {/* Live Exchange Rate */}
+        {exchangeRate && (
+          <p className="text-center mt-4 text-gray-600">
+            1 {fromCurrency.value} = {exchangeRate} {toCurrency.value}
+          </p>
+        )}
 
         {/* Loading */}
         {loading && (
