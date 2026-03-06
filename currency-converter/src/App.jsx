@@ -11,7 +11,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const API_KEY = "YOUR_API_KEY";
+  const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
 
   // Fetch live exchange rate
   useEffect(() => {
