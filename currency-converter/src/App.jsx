@@ -8,7 +8,7 @@ function App() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0]);
   const [toCurrency, setToCurrency] = useState(currencies[1]);
   const [result, setResult] = useState(null);
-  const [displayResult, setDisplayResult] = useState(0); // For count-up animation
+  const [displayResult, setDisplayResult] = useState(0);
   const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,7 +17,7 @@ function App() {
 
   const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
 
-  // Fetch live exchange rate and auto-convert
+  // Fetch exchange rate whenever currencies change
   useEffect(() => {
     const fetchRate = async () => {
       try {
@@ -26,29 +26,25 @@ function App() {
         );
         const data = await res.json();
 
-        if (!data || !data.conversion_rate) {
-          setExchangeRate(null);
-          return;
-        }
+        if (data && data.conversion_rate) {
+          setExchangeRate(data.conversion_rate);
 
-        setExchangeRate(data.conversion_rate);
-
-        const numericAmount = parseFloat(amount);
-        if (!isNaN(numericAmount)) {
-          const converted = (numericAmount * data.conversion_rate).toFixed(2);
-          setResult(converted);
-          animateResult(converted);
+          // Auto-convert if amount exists
+          const numericAmount = parseFloat(amount);
+          if (!isNaN(numericAmount)) {
+            const converted = (numericAmount * data.conversion_rate).toFixed(2);
+            setResult(converted);
+            animateResult(converted);
+          }
         }
       } catch {
         setExchangeRate(null);
         console.log("Rate fetch failed");
       }
     };
-
     fetchRate();
-  }, [fromCurrency, toCurrency, amount]);
+  }, [fromCurrency, toCurrency]);
 
-  // Animate result count-up
   const animateResult = (target) => {
     let start = 0;
     const end = parseFloat(target);
@@ -65,14 +61,7 @@ function App() {
     }, stepTime);
   };
 
-  // Swap currencies
-  const swapCurrencies = () => {
-    const temp = fromCurrency;
-    setFromCurrency(toCurrency);
-    setToCurrency(temp);
-  };
-
-  // Handle input change (auto-convert)
+  // Auto-convert while typing
   const handleAmountChange = (e) => {
     const val = e.target.value;
     setAmount(val);
@@ -88,7 +77,12 @@ function App() {
     }
   };
 
-  // Manual convert button (optional)
+  const swapCurrencies = () => {
+    const temp = fromCurrency;
+    setFromCurrency(toCurrency);
+    setToCurrency(temp);
+  };
+
   const convertCurrency = async () => {
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
@@ -110,15 +104,15 @@ function App() {
       const data = await res.json();
 
       if (data && data.conversion_result) {
-        setResult(data.conversion_result);
-        animateResult(data.conversion_result);
+        setResult(data.conversion_result.toFixed(2));
+        animateResult(data.conversion_result.toFixed(2));
 
         setHistory((prev) => [
           {
             from: fromCurrency.value,
             to: toCurrency.value,
             amount: numericAmount,
-            result: data.conversion_result,
+            result: data.conversion_result.toFixed(2),
           },
           ...prev,
         ]);
@@ -239,7 +233,6 @@ function App() {
               </ul>
             </div>
           )}
-
         </motion.div>
       </div>
     </div>
