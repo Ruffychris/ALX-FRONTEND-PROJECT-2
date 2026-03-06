@@ -8,15 +8,16 @@ function App() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0]);
   const [toCurrency, setToCurrency] = useState(currencies[1]);
   const [result, setResult] = useState(null);
-  const [displayResult, setDisplayResult] = useState(0); // For counting animation
+  const [displayResult, setDisplayResult] = useState(0); // For count-up animation
   const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
+
   const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
 
-  // Fetch live exchange rate
+  // Fetch live exchange rate and auto-convert
   useEffect(() => {
     const fetchRate = async () => {
       try {
@@ -24,17 +25,26 @@ function App() {
           `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}`
         );
         const data = await res.json();
+
+        if (!data || !data.conversion_rate) {
+          setExchangeRate(null);
+          return;
+        }
+
         setExchangeRate(data.conversion_rate);
 
-        if (amount && amount > 0) {
-          const converted = (amount * data.conversion_rate).toFixed(2);
+        const numericAmount = parseFloat(amount);
+        if (!isNaN(numericAmount)) {
+          const converted = (numericAmount * data.conversion_rate).toFixed(2);
           setResult(converted);
           animateResult(converted);
         }
       } catch {
+        setExchangeRate(null);
         console.log("Rate fetch failed");
       }
     };
+
     fetchRate();
   }, [fromCurrency, toCurrency, amount]);
 
@@ -42,7 +52,7 @@ function App() {
   const animateResult = (target) => {
     let start = 0;
     const end = parseFloat(target);
-    const duration = 600; // ms
+    const duration = 600;
     const stepTime = 20;
     const increment = end / (duration / stepTime);
     const counter = setInterval(() => {
@@ -55,18 +65,21 @@ function App() {
     }, stepTime);
   };
 
+  // Swap currencies
   const swapCurrencies = () => {
-    // Animate swap rotation
     const temp = fromCurrency;
     setFromCurrency(toCurrency);
     setToCurrency(temp);
   };
 
+  // Handle input change (auto-convert)
   const handleAmountChange = (e) => {
     const val = e.target.value;
     setAmount(val);
-    if (val && val > 0 && exchangeRate) {
-      const converted = (val * exchangeRate).toFixed(2);
+
+    const numericVal = parseFloat(val);
+    if (!isNaN(numericVal) && exchangeRate) {
+      const converted = (numericVal * exchangeRate).toFixed(2);
       setResult(converted);
       animateResult(converted);
     } else {
@@ -75,8 +88,10 @@ function App() {
     }
   };
 
+  // Manual convert button (optional)
   const convertCurrency = async () => {
-    if (!amount || amount <= 0) {
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
       setError("Enter a valid amount");
       return;
     }
@@ -90,16 +105,24 @@ function App() {
       setError("");
 
       const res = await fetch(
-        `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}/${amount}`
+        `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}/${numericAmount}`
       );
       const data = await res.json();
-      setResult(data.conversion_result);
-      animateResult(data.conversion_result);
 
-      setHistory((prev) => [
-        { from: fromCurrency.value, to: toCurrency.value, amount, result: data.conversion_result },
-        ...prev,
-      ]);
+      if (data && data.conversion_result) {
+        setResult(data.conversion_result);
+        animateResult(data.conversion_result);
+
+        setHistory((prev) => [
+          {
+            from: fromCurrency.value,
+            to: toCurrency.value,
+            amount: numericAmount,
+            result: data.conversion_result,
+          },
+          ...prev,
+        ]);
+      }
     } catch {
       setError("Conversion failed. Try again.");
     } finally {
@@ -151,7 +174,7 @@ function App() {
             />
           </div>
 
-          {/* Swap Button with animation */}
+          {/* Swap Button */}
           <motion.button
             onClick={swapCurrencies}
             whileTap={{ rotate: 180 }}
