@@ -27,3 +27,18 @@ Convert currencies in real-time using the **ExchangeRate-API**, with auto-conver
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/ALX-FRONTEND-PROJECT-2.git
+
+Install dependencies: npm install
+
+Create .env file and add API key:
+REACT_APP_API_KEY=2c7d2f827c-24da54f391-tbhfyf
+
+Start the development server:
+npm start
+
+Open http://localhost:5173
+ to view in browser.
+
+Deployment
+Deployed on Netlify / Vercel. Live link:
+[currency-converter-rufus1.netlify.app]
