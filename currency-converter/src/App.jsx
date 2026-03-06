@@ -1,25 +1,16 @@
 import { useState } from "react";
+import Select from "react-select";
+import { currencies } from "./data/currencies";
 
 function App() {
   const [amount, setAmount] = useState("");
-  const [fromCurrency, setFromCurrency] = useState("USD");
-  const [toCurrency, setToCurrency] = useState("EUR");
+  const [fromCurrency, setFromCurrency] = useState(currencies[0]);
+  const [toCurrency, setToCurrency] = useState(currencies[1]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
-
-  const currencies = [
-    "USD",
-    "EUR",
-    "GBP",
-    "GHS",
-    "CAD",
-    "AUD",
-    "JPY",
-    "CNY",
-  ];
+  const API_KEY = "YOUR_API_KEY";
 
   const swapCurrencies = () => {
     const temp = fromCurrency;
@@ -33,7 +24,7 @@ function App() {
       return;
     }
 
-    if (fromCurrency === toCurrency) {
+    if (fromCurrency.value === toCurrency.value) {
       setError("Choose two different currencies");
       return;
     }
@@ -43,13 +34,13 @@ function App() {
       setError("");
 
       const res = await fetch(
-        `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency}/${toCurrency}/${amount}`
+        `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency.value}/${toCurrency.value}/${amount}`
       );
 
       const data = await res.json();
 
       setResult(data.conversion_result);
-    } catch (err) {
+    } catch {
       setError("Conversion failed. Try again.");
     } finally {
       setLoading(false);
@@ -58,13 +49,13 @@ function App() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-lg rounded-2xl p-8 w-[400px]">
+      <div className="bg-white shadow-xl rounded-2xl p-8 w-[420px]">
 
         <h1 className="text-2xl font-bold text-center mb-6">
           Currency Converter
         </h1>
 
-        {/* Amount Input */}
+        {/* Amount */}
         <input
           type="number"
           placeholder="Enter amount"
@@ -73,40 +64,34 @@ function App() {
           className="w-full border p-2 rounded mb-4"
         />
 
-        {/* Currency Selection */}
-        <div className="flex gap-4 mb-4">
+        {/* Currency Selectors */}
+        <div className="space-y-3">
 
-          <select
+          <Select
+            options={currencies}
             value={fromCurrency}
-            onChange={(e) => setFromCurrency(e.target.value)}
-            className="border p-2 rounded w-full"
-          >
-            {currencies.map((currency) => (
-              <option key={currency}>{currency}</option>
-            ))}
-          </select>
+            onChange={setFromCurrency}
+            placeholder="From currency"
+          />
 
-          <select
+          <Select
+            options={currencies}
             value={toCurrency}
-            onChange={(e) => setToCurrency(e.target.value)}
-            className="border p-2 rounded w-full"
-          >
-            {currencies.map((currency) => (
-              <option key={currency}>{currency}</option>
-            ))}
-          </select>
+            onChange={setToCurrency}
+            placeholder="To currency"
+          />
 
         </div>
 
-        {/* Swap Button */}
+        {/* Swap */}
         <button
           onClick={swapCurrencies}
-          className="w-full mb-4 bg-gray-200 hover:bg-gray-300 p-2 rounded"
+          className="w-full mt-4 mb-3 bg-gray-200 hover:bg-gray-300 p-2 rounded"
         >
           Swap Currencies
         </button>
 
-        {/* Convert Button */}
+        {/* Convert */}
         <button
           onClick={convertCurrency}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
@@ -131,7 +116,7 @@ function App() {
         {/* Result */}
         {result && !loading && (
           <div className="text-center mt-6 text-lg font-semibold">
-            {amount} {fromCurrency} = {result} {toCurrency}
+            {amount} {fromCurrency.value} = {result} {toCurrency.value}
           </div>
         )}
 
