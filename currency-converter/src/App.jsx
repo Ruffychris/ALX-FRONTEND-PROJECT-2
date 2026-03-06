@@ -1,164 +1,143 @@
-import React, { useState, useEffect } from "react"
-import AmountInput from "./components/AmountInput"
-import CurrencySelector from "./components/CurrencySelector"
-import ConversionResult from "./components/ConversionResult"
-import ExchangeRateInfo from "./components/ExchangeRateInfo"
-import { fetchExchangeRates } from "./services/exchangeRateService"
+import { useState } from "react";
 
 function App() {
+  const [amount, setAmount] = useState("");
+  const [fromCurrency, setFromCurrency] = useState("USD");
+  const [toCurrency, setToCurrency] = useState("EUR");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [amount, setAmount] = useState(1)
-  const [fromCurrency, setFromCurrency] = useState("USD")
-  const [toCurrency, setToCurrency] = useState("GHS")
-  const [rates, setRates] = useState({})
-  const [convertedAmount, setConvertedAmount] = useState(null)
-  const [lastUpdated, setLastUpdated] = useState(null)
+  const API_KEY = "YOUR_API_KEY"; // replace with your exchangerate API key
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const currencies = [
+    "USD",
+    "EUR",
+    "GBP",
+    "GHS",
+    "CAD",
+    "AUD",
+    "JPY",
+    "CNY",
+  ];
 
-  // Fetch exchange rates
-  useEffect(() => {
+  const swapCurrencies = () => {
+    const temp = fromCurrency;
+    setFromCurrency(toCurrency);
+    setToCurrency(temp);
+  };
 
-    async function getRates() {
-
-      try {
-
-        setLoading(true)
-        setError(null)
-
-        const data = await fetchExchangeRates(fromCurrency)
-
-        setRates(data.rates)
-        setLastUpdated(data.time_last_update_utc)
-
-      } catch (err) {
-
-        setError("Failed to fetch exchange rates. Please try again.")
-
-      } finally {
-
-        setLoading(false)
-
-      }
+  const convertCurrency = async () => {
+    if (!amount || amount <= 0) {
+      setError("Enter a valid amount");
+      return;
     }
 
-    getRates()
-
-  }, [fromCurrency])
-
-
-  // Calculate conversion
-  useEffect(() => {
-
-    if (rates[toCurrency]) {
-
-      const result = amount * rates[toCurrency]
-      setConvertedAmount(result)
-
+    if (fromCurrency === toCurrency) {
+      setError("Choose two different currencies");
+      return;
     }
 
-  }, [amount, toCurrency, rates])
+    try {
+      setLoading(true);
+      setError("");
 
+      const res = await fetch(
+        `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency}/${toCurrency}/${amount}`
+      );
 
-  // Swap currencies
-  function handleSwap() {
+      const data = await res.json();
 
-    const temp = fromCurrency
-    setFromCurrency(toCurrency)
-    setToCurrency(temp)
-
-  }
+      setResult(data.conversion_result);
+    } catch (err) {
+      setError("Conversion failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-[400px]">
 
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-
-      <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-6 md:p-8">
-
-        <h1 className="text-2xl font-bold mb-6 text-center">
+        <h1 className="text-2xl font-bold text-center mb-6">
           Currency Converter
         </h1>
 
-
-        {/* Loading message */}
-
-        {loading && (
-
-          <p className="text-center text-gray-500 mb-4">
-            Fetching exchange rates...
-          </p>
-
-        )}
-
-
-        {/* Error message */}
-
-        {error && (
-
-          <p className="text-center text-red-500 mb-4">
-            {error}
-          </p>
-
-        )}
-
-
-        <AmountInput
-          amount={amount}
-          setAmount={setAmount}
+        {/* Amount Input */}
+        <input
+          type="number"
+          placeholder="Enter amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full border p-2 rounded mb-4"
         />
 
+        {/* Currency Selection */}
+        <div className="flex gap-4 mb-4">
 
-        {/* Currency selectors */}
-
-        <div className="flex items-end gap-2 my-4">
-
-          <CurrencySelector
-            label="From"
-            currency={fromCurrency}
-            setCurrency={setFromCurrency}
-            currencies={Object.keys(rates)}
-          />
-
-
-          {/* Swap Button */}
-
-          <button
-            onClick={handleSwap}
-            className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          <select
+            value={fromCurrency}
+            onChange={(e) => setFromCurrency(e.target.value)}
+            className="border p-2 rounded w-full"
           >
-            ⇄
-          </button>
+            {currencies.map((currency) => (
+              <option key={currency}>{currency}</option>
+            ))}
+          </select>
 
-
-          <CurrencySelector
-            label="To"
-            currency={toCurrency}
-            setCurrency={setToCurrency}
-            currencies={Object.keys(rates)}
-          />
+          <select
+            value={toCurrency}
+            onChange={(e) => setToCurrency(e.target.value)}
+            className="border p-2 rounded w-full"
+          >
+            {currencies.map((currency) => (
+              <option key={currency}>{currency}</option>
+            ))}
+          </select>
 
         </div>
 
+        {/* Swap Button */}
+        <button
+          onClick={swapCurrencies}
+          className="w-full mb-4 bg-gray-200 hover:bg-gray-300 p-2 rounded"
+        >
+          Swap Currencies
+        </button>
 
-        <ConversionResult
-          amount={convertedAmount}
-          currency={toCurrency}
-        />
+        {/* Convert Button */}
+        <button
+          onClick={convertCurrency}
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+        >
+          Convert
+        </button>
 
+        {/* Loading */}
+        {loading && (
+          <p className="text-center mt-4 text-gray-500">
+            Converting...
+          </p>
+        )}
 
-        <ExchangeRateInfo
-          from={fromCurrency}
-          to={toCurrency}
-          rate={rates[toCurrency]}
-          lastUpdated={lastUpdated}
-        />
+        {/* Error */}
+        {error && (
+          <p className="text-center mt-4 text-red-500">
+            {error}
+          </p>
+        )}
+
+        {/* Result */}
+        {result && !loading && (
+          <div className="text-center mt-6 text-lg font-semibold">
+            {amount} {fromCurrency} = {result} {toCurrency}
+          </div>
+        )}
 
       </div>
-
     </div>
-
-  )
+  );
 }
 
-export default App
+export default App;
