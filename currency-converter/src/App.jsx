@@ -8,14 +8,15 @@ function App() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0]);
   const [toCurrency, setToCurrency] = useState(currencies[1]);
   const [result, setResult] = useState(null);
+  const [displayResult, setDisplayResult] = useState(0); // For counting animation
   const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
-
   const API_KEY = "2c7d2f827c-24da54f391-tbhfyf";
 
+  // Fetch live exchange rate
   useEffect(() => {
     const fetchRate = async () => {
       try {
@@ -25,9 +26,10 @@ function App() {
         const data = await res.json();
         setExchangeRate(data.conversion_rate);
 
-        // auto convert
         if (amount && amount > 0) {
-          setResult((amount * data.conversion_rate).toFixed(2));
+          const converted = (amount * data.conversion_rate).toFixed(2);
+          setResult(converted);
+          animateResult(converted);
         }
       } catch {
         console.log("Rate fetch failed");
@@ -36,10 +38,41 @@ function App() {
     fetchRate();
   }, [fromCurrency, toCurrency, amount]);
 
+  // Animate result count-up
+  const animateResult = (target) => {
+    let start = 0;
+    const end = parseFloat(target);
+    const duration = 600; // ms
+    const stepTime = 20;
+    const increment = end / (duration / stepTime);
+    const counter = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        start = end;
+        clearInterval(counter);
+      }
+      setDisplayResult(start.toFixed(2));
+    }, stepTime);
+  };
+
   const swapCurrencies = () => {
+    // Animate swap rotation
     const temp = fromCurrency;
     setFromCurrency(toCurrency);
     setToCurrency(temp);
+  };
+
+  const handleAmountChange = (e) => {
+    const val = e.target.value;
+    setAmount(val);
+    if (val && val > 0 && exchangeRate) {
+      const converted = (val * exchangeRate).toFixed(2);
+      setResult(converted);
+      animateResult(converted);
+    } else {
+      setResult(null);
+      setDisplayResult(0);
+    }
   };
 
   const convertCurrency = async () => {
@@ -51,6 +84,7 @@ function App() {
       setError("Choose two different currencies");
       return;
     }
+
     try {
       setLoading(true);
       setError("");
@@ -60,6 +94,7 @@ function App() {
       );
       const data = await res.json();
       setResult(data.conversion_result);
+      animateResult(data.conversion_result);
 
       setHistory((prev) => [
         { from: fromCurrency.value, to: toCurrency.value, amount, result: data.conversion_result },
@@ -72,21 +107,13 @@ function App() {
     }
   };
 
-  const handleAmountChange = (e) => {
-    const val = e.target.value;
-    setAmount(val);
-    if (val && val > 0 && exchangeRate) {
-      setResult((val * exchangeRate).toFixed(2));
-    } else {
-      setResult(null);
-    }
-  };
-
   return (
     <div className={`${darkMode ? "dark" : ""} transition-colors duration-500`}>
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 w-[420px] transition-colors duration-500">
-          
+        <motion.div
+          layout
+          className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 w-[420px] transition-colors duration-500"
+        >
           {/* Dark Mode Toggle */}
           <div className="flex justify-end mb-3">
             <button
@@ -124,13 +151,14 @@ function App() {
             />
           </div>
 
-          {/* Swap Button */}
-          <button
+          {/* Swap Button with animation */}
+          <motion.button
             onClick={swapCurrencies}
+            whileTap={{ rotate: 180 }}
             className="w-full mt-4 mb-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 p-2 rounded transition-colors duration-300"
           >
             Swap Currencies
-          </button>
+          </motion.button>
 
           {/* Convert Button */}
           <button
@@ -159,9 +187,9 @@ function App() {
             <p className="text-center mt-4 text-red-500">{error}</p>
           )}
 
-          {/* Result with Animation */}
+          {/* Animated Result */}
           <AnimatePresence>
-            {result && !loading && (
+            {displayResult && !loading && (
               <motion.div
                 key="result"
                 initial={{ opacity: 0, y: -10 }}
@@ -169,7 +197,7 @@ function App() {
                 exit={{ opacity: 0 }}
                 className="text-center mt-6 text-lg font-semibold text-gray-900 dark:text-gray-100"
               >
-                {amount} {fromCurrency.value} = {result} {toCurrency.value}
+                {amount} {fromCurrency.value} = {displayResult} {toCurrency.value}
               </motion.div>
             )}
           </AnimatePresence>
@@ -189,7 +217,7 @@ function App() {
             </div>
           )}
 
-        </div>
+        </motion.div>
       </div>
     </div>
   );
